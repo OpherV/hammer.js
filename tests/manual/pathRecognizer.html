@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="assets/style.css">
+    <title>Hammer.js</title>
+</head>
+<body>
+<div class="container">
+
+    <div id="hit" class="bg1" style="padding: 30px;">
+        <div id="target" class="bg5" style="display: block; text-align: center;">
+            <svg width="100%" height="100%" viewBox="-100 -100 300 300">
+                  <path class="sourcePath" d="M0 0 L50 25 L75 50 L100 100" stroke-width="2" stroke="black" fill="none"/>
+                  <path class="trackPath" d="M0 0 L50 25 L75 50 L100 100" stroke-width="2" stroke="red" fill="none"/>
+
+                  <circle cx="5" cy="5" r="2" stroke="none" stroke-width="3" fill="white" />
+            </svg>
+        </div>
+    </div>
+
+    <div id="globalCircleDebug" style="border-radius: 5px; background: green; position: absolute; width: 5px; height: 5px"></div>
+
+    <pre id="debug" style="overflow:hidden; background: #eee; padding: 15px;"></pre>
+
+    <pre id="log" style="overflow:hidden;"></pre>
+
+</div>
+<script src="../../hammer.min.js"></script>
+<script>
+
+    var svgEl = document.querySelector("svg");
+    var pathEl = document.querySelector("path.sourcePath");
+
+    var circleEl = document.querySelector("circle");
+    var globalCircleEl = document.querySelector("#globalCircleDebug");
+
+    var trackPathEl = document.querySelector("path.trackPath");
+    var pathLength = trackPathEl.getTotalLength();
+
+
+    var mc = new Hammer(document.querySelector("svg"));
+    mc.add(new Hammer.Path({
+        svgElement: svgEl,
+        pathElement: pathEl
+    }));
+
+    mc.on("path", function(ev){
+//        console.log(ev.pathPercent, ev.pathLength);
+        trackPathEl.style.strokeDasharray = [ev.pathLength, pathLength].join(' ');
+//
+//        globalCircleEl.style.left=( ev.center.x) + "px";
+//        globalCircleEl.style.top=(ev.center.y) + "px";
+
+//        console.log(ev.localX, ev.localY);
+        circleEl.setAttribute("cx", ev.localX);
+        circleEl.setAttribute("cy", ev.localY);
+    });
+
+    function DEBUG(str) {
+        debug.textContent = str;
+    }
+
+
+</script>
+</body>
+</html>
