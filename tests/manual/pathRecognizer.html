@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1">
     <link rel="stylesheet" href="assets/style.css">
     <title>Hammer.js</title>
+
+    <style>
+        path.sourcePath{
+            transition: all 0.5s ease-out;
+        }
+    </style>
 </head>
 <body>
 <div class="container">
@@ -12,15 +18,11 @@
     <div id="hit" class="bg1" style="padding: 30px;">
         <div id="target" class="bg5" style="display: block; text-align: center;">
             <svg width="100%" height="100%" viewBox="-100 -100 300 300">
-                  <path class="sourcePath" d="M0 0 L50 25 L75 50 L100 100" stroke-width="2" stroke="black" fill="none"/>
-                  <path class="trackPath" d="M0 0 L50 25 L75 50 L100 100" stroke-width="2" stroke="red" fill="none"/>
-
-                  <circle cx="5" cy="5" r="2" stroke="none" stroke-width="3" fill="white" />
+                  <path class="sourcePath" d="" stroke-width="2" stroke="black" fill="none"/>
+                  <path class="trackPath" d="" stroke-width="2.1" stroke="red" fill="none"/>
             </svg>
         </div>
     </div>
-
-    <div id="globalCircleDebug" style="border-radius: 5px; background: green; position: absolute; width: 5px; height: 5px"></div>
 
     <pre id="debug" style="overflow:hidden; background: #eee; padding: 15px;"></pre>
 
@@ -28,39 +30,79 @@
 
 </div>
 <script src="../../hammer.min.js"></script>
+
 <script>
 
     var svgEl = document.querySelector("svg");
     var pathEl = document.querySelector("path.sourcePath");
 
-    var circleEl = document.querySelector("circle");
-    var globalCircleEl = document.querySelector("#globalCircleDebug");
-
     var trackPathEl = document.querySelector("path.trackPath");
-    var pathLength = trackPathEl.getTotalLength();
 
+    var currentPathIndex = 0;
+    var paths = ["M0 0 L50 25 L75 50 L100 100",
+                 "m17.002326,40.230229c0,0 6.813966,-27.004652 32.813966,-25.004652c26,2 32.176729,16.860487 34.697664,28.813966c2.520935,11.953478 -0.82327,35.702316 -29.82327,40.702316c-29,5 -29.413937,-23.079085 -19.413937,-36.079085c10,-13 16.493022,-5.092993 25.493022,8.907007"
+    ];
 
-    var mc = new Hammer(document.querySelector("svg"));
-    mc.add(new Hammer.Path({
-        svgElement: svgEl,
-        pathElement: pathEl
-    }));
+    var mc;
 
-    mc.on("path", function(ev){
-//        console.log(ev.pathPercent, ev.pathLength);
-        trackPathEl.style.strokeDasharray = [ev.pathLength, pathLength].join(' ');
-//
-//        globalCircleEl.style.left=( ev.center.x) + "px";
-//        globalCircleEl.style.top=(ev.center.y) + "px";
+    function changePath(index) {
+        pathEl.setAttribute("d", paths[index]);
+        trackPathEl.setAttribute("d", paths[index]);
+        var pathLength = trackPathEl.getTotalLength();
+        trackPathEl.style.strokeDasharray = [index, pathLength].join(' ');
 
-//        console.log(ev.localX, ev.localY);
-        circleEl.setAttribute("cx", ev.localX);
-        circleEl.setAttribute("cy", ev.localY);
-    });
+        trackPathEl.style.transition = "none";
+        trackPathEl.style.stroke = "red";
 
-    function DEBUG(str) {
-        debug.textContent = str;
+        if (mc) {
+            mc.destroy();
+        }
+
+        mc = new Hammer(document.querySelector("svg"));
+        mc.add(new Hammer.Path({
+            svgElement: svgEl,
+            pathElement: pathEl
+        }));
+
+        mc.on("pathmove", function(ev){
+            console.log(Math.round(ev.pathPercent), "% completed");
+            trackPathEl.style.strokeDasharray = [ev.pathLength, pathLength].join(' ');
+        });
+
+        mc.on("pathstart", function(ev){
+            trackPathEl.style.transition = "none";
+        });
+
+        mc.on("pathend", function(ev){
+            if (ev.pathComplete == true) {
+                trackPathEl.style.transition = "all 0.3s ease-in";
+                trackPathEl.style.stroke = "rgba(66,214,84,1)";
+
+                currentPathIndex++;
+
+                setTimeout(function(){
+                    changePath(currentPathIndex);
+                }, 1000);
+
+            }
+            else{
+                trackPathEl.style.transition = "all 0.5s ease-out";
+                trackPathEl.style.strokeDasharray = [0, pathLength].join(' ');
+            }
+
+        });
     }
+
+    changePath(0);
+
+
+//    mc.on("path pathstart pathend pathmove pathcancel",
+//            logGesture);
+//
+//
+//    function logGesture(ev) {
+//        console.log(ev.timeStamp, ev.type, ev);
+//    }
 
 
 </script>

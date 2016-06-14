@@ -4,21 +4,16 @@
  * @constructor
  * @extends AttrRecognizer
  */
-function PathRecognizer(inputOptions) {
+function PathRecognizer() {
     AttrRecognizer.apply(this, arguments);
-
-    var defaultOptions = {
-        resolution: 10, //path will be quantizied to this amount of segments
-        maxDistanceFromSegment: 10
-    };
-
-    Object.assign(this.options, defaultOptions, inputOptions);
 
     this.pathTotalLength = this.options.pathElement.getTotalLength();
     this.segmentLength = (this.pathTotalLength / this.options.resolution);
     this.currentSegmentIndex = 0; //which segment should we match against next
     this.pX = null;
     this.pY = null;
+
+    this.state = STATE_BEGAN;
 
 }
 
@@ -29,27 +24,15 @@ inherit(PathRecognizer, AttrRecognizer, {
      */
     defaults: {
         event: 'path',
-        threshold: 10,
+        threshold: 5,
         pointers: 1,
-        direction: DIRECTION_ALL
+        resolution: 10, //path will be quantizied to this amount of segments
+        maxDistanceFromSegment: 20
     },
 
-    // getTouchAction: function() {
-    //     var direction = this.options.direction;
-    //     var actions = [];
-    //     if (direction & DIRECTION_HORIZONTAL) {
-    //         actions.push(TOUCH_ACTION_PAN_Y);
-    //     }
-    //     if (direction & DIRECTION_VERTICAL) {
-    //         actions.push(TOUCH_ACTION_PAN_X);
-    //     }
-    //     return actions;
-    // },
-
-    // attrTest: function(input) {
-    //     return AttrRecognizer.prototype.attrTest.call(this, input) &&
-    //         (this.state & STATE_BEGAN || (!(this.state & STATE_BEGAN) && this.directionTest(input)));
-    // },
+    attrTest: function(input) {
+        return AttrRecognizer.prototype.attrTest.call(this, input);
+    },
 
     /**
      * Process the input and return the state for the recognizer
@@ -58,56 +41,43 @@ inherit(PathRecognizer, AttrRecognizer, {
      * @returns {*} State
      */
     process: function(input) {
+        if (!this.attrTest(input)) {
+            return STATE_FAILED;
+        }
+
         var svgCoords = getSvgLocalPoint(this.options.svgElement, input.center.x, input.center.y);
 
         input.localX = svgCoords.x;
         input.localY = svgCoords.y;
 
-        // var distToSegmentPoint = distance(svgCoords, this.segmentPoints[this.currentSegmentIndex]);
         var closestPoint = findClosestPoint(this.options.pathElement, svgCoords);
         this.pathPercent = input.pathPercent = closestPoint.pathPercent;
         this.pathLength = input.pathLength = closestPoint.pathLength;
 
-
-         console.log(this.currentSegmentIndex, this.pathPercent);
-
         if (closestPoint.distance > this.options.maxDistanceFromSegment) {
-            console.log("failed");
-            return STATE_FAILED;
-
-        } else if (this.currentSegmentIndex == this.options.resolution && (100 - this.pathPercent) < 0.5) {
-            console.log("success");
+            input.pathComplete = false;
+            return STATE_ENDED;
+        }
+        else if (input.distance === 0 && this.state != STATE_BEGAN) {
+            return STATE_BEGAN;
+        }
+        else if (input.distance < this.options.threshold) {
+            return STATE_POSSIBLE;
+        }
+        else if (this.currentSegmentIndex == this.options.resolution && (100 - this.pathPercent) < 0.5) {
+            input.pathComplete = true;
             return STATE_RECOGNIZED;
         }
-        else if (this.pathPercent/100 > (this.currentSegmentIndex) * this.segmentLength / this.pathTotalLength &&
-            this.pathPercent/100 < (this.currentSegmentIndex + 1) * this.segmentLength / this.pathTotalLength) {
+        else if (this.pathPercent / 100 > (this.currentSegmentIndex) * this.segmentLength / this.pathTotalLength &&
+            this.pathPercent / 100 < (this.currentSegmentIndex + 1) * this.segmentLength / this.pathTotalLength) {
             this.currentSegmentIndex++;
         }
 
-        // var state = this.state;
-        // var eventType = input.eventType;
-        //
-        // var isRecognized = state & (STATE_BEGAN | STATE_CHANGED);
-        // var isValid = this.attrTest(input);
-        //
-        // // on cancel input and we've recognized before, return STATE_CANCELLED
-        // if (isRecognized && (eventType & INPUT_CANCEL || !isValid)) {
-        //     return state | STATE_CANCELLED;
-        // } else if (isRecognized || isValid) {
-        //     if (eventType & INPUT_END) {
-        //         return state | STATE_ENDED;
-        //     } else if (!(state & STATE_BEGAN)) {
-        //         return STATE_BEGAN;
-        //     }
-        //     return state | STATE_CHANGED;
-        // }
-        // return STATE_FAILED;
-
         return STATE_CHANGED;
+
     },
 
     emit: function(input) {
-
         this.pX = input.deltaX;
         this.pY = input.deltaY;
 
