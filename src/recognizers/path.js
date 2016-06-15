@@ -27,11 +27,18 @@ inherit(PathRecognizer, AttrRecognizer, {
         threshold: 5,
         pointers: 1,
         resolution: 10, //path will be quantizied to this amount of segments
-        maxDistanceFromSegment: 20
+        maxDistanceFromSegment: 30
     },
 
     attrTest: function(input) {
         return AttrRecognizer.prototype.attrTest.call(this, input);
+    },
+
+    emit: function(input) {
+        this.pX = input.deltaX;
+        this.pY = input.deltaY;
+
+        this._super.emit.call(this, input);
     },
 
     /**
@@ -54,6 +61,7 @@ inherit(PathRecognizer, AttrRecognizer, {
         this.pathPercent = input.pathPercent = closestPoint.pathPercent;
         this.pathLength = input.pathLength = closestPoint.pathLength;
 
+        //veer too far from path - fail
         if (closestPoint.distance > this.options.maxDistanceFromSegment) {
             input.pathComplete = false;
             return STATE_ENDED;
@@ -61,10 +69,7 @@ inherit(PathRecognizer, AttrRecognizer, {
         else if (input.distance === 0 && this.state != STATE_BEGAN) {
             return STATE_BEGAN;
         }
-        else if (input.distance < this.options.threshold) {
-            return STATE_POSSIBLE;
-        }
-        else if (this.currentSegmentIndex == this.options.resolution && (100 - this.pathPercent) < 0.5) {
+        else if (this.currentSegmentIndex == this.options.resolution && (100 - this.pathPercent) < 0.9) {
             input.pathComplete = true;
             return STATE_RECOGNIZED;
         }
@@ -72,16 +77,19 @@ inherit(PathRecognizer, AttrRecognizer, {
             this.pathPercent / 100 < (this.currentSegmentIndex + 1) * this.segmentLength / this.pathTotalLength) {
             this.currentSegmentIndex++;
         }
+        //start drawing path from middle or jump ahead - fail
+        else if (this.pathPercent / 100 > (this.currentSegmentIndex + 1) * this.segmentLength / this.pathTotalLength) {
+            input.pathComplete = false;
+            return STATE_ENDED;
+        }
+        //stop input before reaching end - fail
+        else if (input.eventType == INPUT_END) {
+            input.pathComplete = false;
+            return STATE_ENDED;
+        }
 
         return STATE_CHANGED;
 
-    },
-
-    emit: function(input) {
-        this.pX = input.deltaX;
-        this.pY = input.deltaY;
-
-        this._super.emit.call(this, input);
     }
 });
 
