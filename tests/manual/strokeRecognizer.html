@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="assets/style.css">
+    <title>Hammer.js</title>
+
+    <style>
+        path.sourcePath{
+            transition: all 0.5s ease-out;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div id="hit" class="bg1" style="padding: 30px;">
+        <div id="target" class="bg5" style="display: block; text-align: center;">
+            <canvas style="width: 100%; height: 100%;"></canvas>
+        </div>
+    </div>
+
+    <pre id="debug" style="overflow:hidden; background: #eee; padding: 15px;"></pre>
+
+    <pre id="log" style="overflow:hidden;"></pre>
+
+</div>
+<script src="../../hammer.min.js"></script>
+
+<script>
+
+    var canvasEl = document.querySelector("canvas");
+    canvasEl.addEventListener("contextmenu",function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+    });
+
+    var mc = new Hammer(canvasEl, {
+        touchAction: "none"
+    });
+
+    mc.add(new Hammer.Stroke({}));
+
+
+
+    mc.on("strokestart", function(ev){
+        var x = ev.center.x;
+        var y = ev.center.y;
+
+        x -= _rc.x;
+        y -= _rc.y - document.body.scrollTop;
+        if (_points.length > 0)
+            _g.clearRect(0, 0, _rc.width, _rc.height);
+
+        _points = []; // clear
+        _points.push(new Point(x, y));
+
+//        _g.fillRect(x - 4, y - 3, 9, 9);
+
+        _g.beginPath();
+        _g.arc(x, y, 15, 0, 2 * Math.PI, false);
+        _g.fillStyle = 'rgba(255,255,255,1)';
+        _g.fill();
+
+
+    });
+
+    mc.on("strokemove", function(ev){
+        var x = ev.center.x;
+        var y = ev.center.y;
+
+        x -= _rc.x;
+        y -= _rc.y - document.body.scrollTop;
+
+        _points.push(new Point(x, y)); // append
+        if (_points.length>1) {
+            drawConnectedPoint(_points.length - 2, _points.length - 1);
+        }
+    });
+
+
+    mc.on("stroke", function(ev){
+        console.log(ev.isRecognized, ev.result);
+    });
+
+
+
+//        mc.on("path pathstart pathend pathmove pathcancel",
+//                logGesture);
+//
+//
+//        function logGesture(ev) {
+//            console.log(ev.timeStamp, ev.type, ev);
+//        }
+
+
+    var _g = canvasEl.getContext('2d');
+
+    var rect= canvasEl.getBoundingClientRect();
+
+    _g.canvas.width = rect.width;
+    _g.canvas.height = rect.height;
+
+    var _rc = getCanvasRect(canvasEl); // canvas rect on page
+
+    var _points = new Array();
+
+
+    function getCanvasRect(canvas)
+    {
+        var w = canvas.width;
+        var h = canvas.height;
+
+        var cx = canvas.offsetLeft;
+        var cy = canvas.offsetTop;
+        while (canvas.offsetParent != null)
+        {
+            canvas = canvas.offsetParent;
+            cx += canvas.offsetLeft;
+            cy += canvas.offsetTop;
+        }
+
+        return {x: cx, y: cy, width: w, height: h};
+    }
+
+
+    function drawConnectedPoint(from, to)
+    {
+        _g.strokeStyle = "white";
+        _g.lineWidth = 8;
+
+        _g.beginPath();
+        _g.moveTo(_points[from].X, _points[from].Y);
+        _g.lineTo(_points[to].X, _points[to].Y);
+        _g.closePath();
+        _g.stroke();
+    }
+
+    function Point(x, y) // constructor
+    {
+        this.X = x;
+        this.Y = y;
+    }
+
+
+
+</script>
+</body>
+</html>

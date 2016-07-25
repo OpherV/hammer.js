@@ -39,6 +39,7 @@ assign(Hammer, {
     Pinch: PinchRecognizer,
     Rotate: RotateRecognizer,
     Press: PressRecognizer,
+    Stroke: StrokeRecognizer,
 
     on: addEventListeners,
     off: removeEventListeners,

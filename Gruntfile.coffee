@@ -19,6 +19,7 @@ module.exports = (grunt) ->
     concat:
       build:
         src: [
+          'src/dollar.js'
           'src/hammer.prefix.js'
           'src/utils.js'
           'src/input.js'
