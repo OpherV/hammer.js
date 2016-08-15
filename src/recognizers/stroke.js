@@ -7,7 +7,7 @@
  * @constructor
  * @extends AttrRecognizer
  */
-function StrokeRecognizer() {
+function StrokeRecognizer(options) {
     AttrRecognizer.apply(this, arguments);
 
     this.pX = null;
@@ -18,6 +18,16 @@ function StrokeRecognizer() {
 
     this.state = STATE_BEGAN;
 
+    if (options && options.customStrokes) {
+        this.customStrokes = options.customStrokes;
+
+        // add custom strokes to dollar recognizer
+        for (var property in this.customStrokes) {
+            if (this.customStrokes.hasOwnProperty(property)) {
+                this.dollarRecognizer.AddGesture(property, this.customStrokes[property].points);
+            }
+        }
+    }
 }
 
 inherit(StrokeRecognizer, AttrRecognizer, {
@@ -29,13 +39,14 @@ inherit(StrokeRecognizer, AttrRecognizer, {
         event: 'stroke',
         threshold: 5,
         pointers: 1,
-        recognizeShapeName: 'z',
+        shapeName: null, // which shape(s) should the recognizer recognize
         recognizeThreshold: 0.8, //above this threshold a stroke is considered recognized
+        inFlight: false, //should you try to recognize as the user draws
         recognizeInterval: 5 //the interval on samples to run recognition on
     },
 
     attrTest: function(input) {
-        return AttrRecognizer.prototype.attrTest.call(this, input);
+        return this._super.attrTest.call(this, input);
     },
 
     emit: function(input) {
@@ -59,7 +70,6 @@ inherit(StrokeRecognizer, AttrRecognizer, {
             this.pointArray = [];
             return STATE_FAILED;
         }
-
         if (input.distance === 0) {
             this.points = []; // clear
             this.points.push({
@@ -67,8 +77,13 @@ inherit(StrokeRecognizer, AttrRecognizer, {
                 Y:input.center.y
             });
 
+            this.firstStrokeDirectionOk = null;
 
             return STATE_BEGAN;
+        }
+        //direction is either a number or array of numbers
+        else if (!this.isFirstStrokeDirectionOk(input)){
+            return STATE_FAILED;
         }
         else if (input.eventType == INPUT_END) {
             dollarResult = runDollar();
@@ -84,7 +99,8 @@ inherit(StrokeRecognizer, AttrRecognizer, {
             });
 
             //try to recognize in-flight
-            if (this.options.recognizeInterval > 0 &&
+            if (this.options.inFlight &&
+                this.options.recognizeInterval > 0 &&
                 this.points.length % this.options.recognizeInterval === 0){
 
                 dollarResult = runDollar();
@@ -100,18 +116,49 @@ inherit(StrokeRecognizer, AttrRecognizer, {
 
 
         function runDollar(){
-            var result = that.dollarRecognizer.Recognize(that.points, false);
-            var isRecognized = (result.Name == that.options.recognizeShapeName &&
-                result.Score >= that.options.recognizeThreshold);
+            if (that.options.shapeName) {
+                var result = that.dollarRecognizer.Recognize(that.points, false);
+                var isRecognized = (result.Name == that.options.shapeName &&
+                    result.Score >= that.options.recognizeThreshold);
 
-            return {
-                result: result,
-                isRecognized: isRecognized
-            };
+                return {
+                    result: result,
+                    isRecognized: isRecognized
+                };
+            }
+            else {
+                console.error('Hammer Stroke Recognizer: no shape name specified');
+                return {
+                    result: null,
+                    isRecognized: false
+                };
+            }
 
         }
 
         return STATE_CHANGED;
 
+    },
+
+    isFirstStrokeDirectionOk: function (input) {
+        //failed in the past
+        if (this.firstStrokeDirectionOk === false){
+            return false;
+        }
+        else if (this.options.firstStrokeDirection &&
+            this.firstStrokeDirectionOk == null &&
+            input.direction != DIRECTION_NONE){
+
+            this.firstStrokeDirectionOk = Array.isArray(this.options.firstStrokeDirection) && this.options.firstStrokeDirection.indexOf(input.direction) > -1;
+            // console.log('2',this.options.firstStrokeDirection,input.direction,this.options.firstStrokeDirection.indexOf(input.direction) > -1);
+
+            return this.firstStrokeDirectionOk;
+        }
+        else{
+            //either no limit on firstStrokeDirection, or it was correct
+            return true;
+        }
+
+    // console.log(this.options.direction, input.direction);
     }
 });
