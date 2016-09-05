@@ -2355,6 +2355,7 @@ inherit(StrokeRecognizer, AttrRecognizer, {
         shapeName: null, // which shape(s) should the recognizer recognize
         recognizeThreshold: 0.8, //above this threshold a stroke is considered recognized
         inFlight: false, //should you try to recognize as the user draws
+        minDrawnLength: 0, // the minimal drawn length for recognition
         recognizeInterval: 5 //the interval on samples to run recognition on
     },
 
@@ -2378,6 +2379,14 @@ inherit(StrokeRecognizer, AttrRecognizer, {
     process: function(input) {
         var that = this;
         var dollarResult;
+
+        var drawnLength = 0;
+        for (var x=0; x<this.points.length-1;x++){
+            var p1 = this.points[x];
+            var p2 = this.points[x+1];
+            drawnLength += Math.sqrt( (p1.X-p2.X)*(p1.X-p2.X) + (p1.Y-p2.Y)*(p1.Y-p2.Y) );
+        }
+
 
         if (!this.attrTest(input)) {
             this.pointArray = [];
@@ -2414,7 +2423,9 @@ inherit(StrokeRecognizer, AttrRecognizer, {
             //try to recognize in-flight
             if (this.options.inFlight &&
                 this.options.recognizeInterval > 0 &&
-                this.points.length % this.options.recognizeInterval === 0){
+                this.points.length % this.options.recognizeInterval === 0 &&
+                drawnLength >= this.options.minDrawnLength
+            ){
 
                 dollarResult = runDollar();
                 if (dollarResult.isRecognized) {
