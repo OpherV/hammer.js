@@ -1,3 +1,8 @@
+/*! Hammer.JS - v2.0.8 - 2016-10-19
+ * http://hammerjs.github.io/
+ *
+ * Copyright (c) 2016 Jorik Tangelder;
+ * Licensed under the MIT license */
 /**
  * The $1 Unistroke Recognizer (JavaScript version)
  *
@@ -2405,7 +2410,8 @@ inherit(StrokeRecognizer, AttrRecognizer, {
         }
         //direction is either a number or array of numbers
         else if (!this.isFirstStrokeDirectionOk(input)){
-            return STATE_FAILED;
+            input.isRecognized = false;
+            return STATE_ENDED;
         }
         else if (input.eventType == INPUT_END) {
             dollarResult = runDollar();
