@@ -92,8 +92,7 @@ inherit(StrokeRecognizer, AttrRecognizer, {
         }
         //direction is either a number or array of numbers
         else if (!this.isFirstStrokeDirectionOk(input)){
-            input.isRecognized = false;
-            return STATE_ENDED;
+            return STATE_FAILED;
         }
         else if (input.eventType == INPUT_END) {
             dollarResult = runDollar();
