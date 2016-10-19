@@ -2408,15 +2408,17 @@ inherit(StrokeRecognizer, AttrRecognizer, {
 
             return STATE_BEGAN;
         }
-        //direction is either a number or array of numbers
-        else if (!this.isFirstStrokeDirectionOk(input)){
-            return STATE_FAILED;
-        }
-        else if (input.eventType == INPUT_END) {
-            dollarResult = runDollar();
-            input.result = dollarResult.result;
-            input.isRecognized = dollarResult.isRecognized;
-            return dollarResult.isRecognized ? STATE_RECOGNIZED : STATE_ENDED;
+
+        if (input.eventType == INPUT_END) {
+            if (this.isFirstStrokeDirectionOk(input)){
+                dollarResult = runDollar();
+                input.result = dollarResult.result;
+                input.isRecognized = dollarResult.isRecognized;
+                return dollarResult.isRecognized ? STATE_RECOGNIZED : STATE_ENDED;
+            }
+            else{
+                return STATE_ENDED;
+            }
         }
         else{
 
